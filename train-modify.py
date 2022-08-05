@@ -927,6 +927,7 @@ def main(_argv):
         return mAP,final_mrec,final_mpre,ap_list
         
     VAL_LOSS = 100000
+    Total_epoch = first_stage_epochs + second_stage_epochs
     for epoch in range(first_stage_epochs + second_stage_epochs):
         records = []
         if epoch < first_stage_epochs:
@@ -942,7 +943,7 @@ def main(_argv):
                     freeze = model.get_layer(name)
                     unfreeze_all(freeze)
         
-        print(' Train Epoch  Total_loss  giou_loss      conf_loss      prob_loss')
+        print('  Epoch    box      obj      class      total      img_size')
         print('===========================================================================')
         pbar_train = tqdm.tqdm(trainset,ncols=110)
         pbar_test = tqdm.tqdm(testset,ncols=110)
@@ -959,10 +960,13 @@ def main(_argv):
             
             
             
-            bar_str =   '     '+str(epoch+1) + '         '+ str(total_loss_train)\
-                      + '         ' + str(giou_loss)\
-                      + '         ' + str(conf_loss)\
-                      + '         ' + str(prob_loss)
+            bar_str =   '   '+str(epoch+1)+'/'+str(Total_epoch)\
+                      + '     ' + str(giou_loss)\
+                      + '     ' + str(conf_loss)\
+                      + '     ' + str(prob_loss)\
+                      + '     ' + str(total_loss_train)\
+                      + '     ' + str(cfg.TRAIN.INPUT_SIZE)
+        
             PREFIX = colorstr(bar_str)
             pbar_train.desc = f'{PREFIX}'
             
@@ -976,7 +980,7 @@ def main(_argv):
         save_valloss_min_model = True
         Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss = 0,0,0,0
         if DO_VAL:
-            print('      Val Epoch  Total_loss  giou_loss  conf_loss  prob_loss')
+            print('          box        obj        cls        total')
             print('     --------------------------------------------------------')
             save_valloss_min_model = False
             for image_data, target in pbar_test:
@@ -987,10 +991,11 @@ def main(_argv):
                 conf_loss =  float(int(conf_loss.numpy()*100)/100.0)
                 prob_loss =  float(int(prob_loss.numpy()*100)/100.0)
                 
-                bar_str =   '          '+str(epoch+1) + '         '+ str(total_loss_val)\
-                          + '          ' + str(giou_loss)\
-                          + '          ' + str(conf_loss)\
-                          + '          ' + str(prob_loss)
+                bar_str =  '            ' + str(giou_loss)\
+                         + '      ' + str(conf_loss)\
+                         + '      ' + str(prob_loss)\
+                         + '      ' + str(total_loss_val)  
+                          
                 PREFIX = colorstr(bar_str)
                 pbar_test.desc = f'{PREFIX}'
                 
@@ -1016,8 +1021,8 @@ def main(_argv):
             #print('Best Val loss: {} , Total_Val_Loss : {} start to save current model'.format(VAL_LOSS,Total_Val_Loss))
             model.save_weights("./checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/yolov4")
         
-        #annotation_path= './datasets/factory_data_val_blur9.txt'
-        annotation_path= './datasets/factory_data_val_blur9_20220728_small.txt'
+        annotation_path= './datasets/factory_data_val_blur9.txt'
+        #annotation_path= './datasets/factory_data_val_blur9_20220728_small.txt'
         Validation('./checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/yolov4-tiny',INPUT_SIZE=416,framework='tf',annotation_path=annotation_path,model='yolov4',tiny=False,IOU=0.45,SCORE=0.30)
         output = './mAP/results'
         mAP, m_mrec, m_mprec, ap_list = precision_recall_mAP(output,draw_plot=True,show_animation=False,ignore=[],set_class_iou=None,MINOVERLAP=0.5,quiet=True,no_plot=True)
@@ -1028,9 +1033,9 @@ def main(_argv):
         
         #print(ap_list)
                 
-        full_text = '            ' + str(epoch+1) + '        ' + m_mprec_text + '        ' + m_mrec_text + '        ' + mAP_text
+        full_text = '           ' + m_mprec_text + '    ' + m_mrec_text + '    ' + mAP_text
         PREFIX = colorstr(full_text)
-        column    = '       Val Epoch    precision    recall    mAP@.5'
+        column    = '            P      R      mAP@.5'
         
         print(column)
         print('    ----------------------------------------------')
