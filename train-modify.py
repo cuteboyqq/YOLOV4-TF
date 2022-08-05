@@ -944,7 +944,7 @@ def main(_argv):
                     unfreeze_all(freeze)
         
         print('  Epoch    box      obj      class      total      img_size')
-        print('===========================================================================')
+        #print('===========================================================================')
         pbar_train = tqdm.tqdm(trainset,ncols=110)
         pbar_test = tqdm.tqdm(testset,ncols=110)
         
@@ -981,7 +981,7 @@ def main(_argv):
         Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss = 0,0,0,0
         if DO_VAL:
             print('          box        obj        cls        total')
-            print('     --------------------------------------------------------')
+            #print('     --------------------------------------------------------')
             save_valloss_min_model = False
             for image_data, target in pbar_test:
                 total_loss_val,giou_loss,conf_loss,prob_loss = test_step(image_data, target)
@@ -1038,7 +1038,7 @@ def main(_argv):
         column    = '            P      R      mAP@.5'
         
         print(column)
-        print('    ----------------------------------------------')
+        #print('    ----------------------------------------------')
         print(PREFIX)
         import csv
         result_path = './checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/result.csv'
