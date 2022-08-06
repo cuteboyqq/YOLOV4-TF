@@ -21,9 +21,9 @@ import glob
 import json
 from core.yolov4 import YOLO, decode, filter_boxes
 flags.DEFINE_string('model', 'yolov4', 'yolov4, yolov3')
-flags.DEFINE_string('weights', './checkpoints_yolov4_20220729_ciou_tf25_mosaic_aug/yolov4', 'pretrained weights')
+#flags.DEFINE_string('weights', './checkpoints_yolov4_20220729_ciou_tf25_mosaic_aug/yolov4', 'pretrained weights')
 flags.DEFINE_boolean('tiny', False, 'yolo or yolo-tiny')
-#flags.DEFINE_string('weights', None, 'pretrained weights')
+flags.DEFINE_string('weights', None, 'pretrained weights')
 flags.DEFINE_string('output', './checkpoints_yolov4_20220804_ciou_tf25_mosaic_aug_tiny/yolov4-tiny', 'path to output')
 flags.DEFINE_integer('input_size', 416, 'define input size of export model')
 flags.DEFINE_float('score_thres', 0.50, 'define score threshold')
@@ -942,8 +942,8 @@ def main(_argv):
                     freeze = model.get_layer(name)
                     unfreeze_all(freeze)
         print("")
-        print("------------------------------------------------------------------------------------")
-        print(' Epoch        Total_loss      box       obj       cls      img_size')
+        print("---------------------------------------------------------------------------------------------")
+        print(' Epoch        Total_loss      box         obj          cls      img_size')
         #print('====================================================================================')
         pbar_train = tqdm.tqdm(trainset,ncols=140)
         pbar_test = tqdm.tqdm(testset,ncols=140)
@@ -953,9 +953,9 @@ def main(_argv):
             total_loss_train,giou_loss,conf_loss,prob_loss = train_step(image_data, target, epoch)
             
             #total_loss_train =  float(int(total_loss_train*100)/100.0)
-            giou_loss =  float(int(giou_loss.numpy()*100)/100.0)
-            conf_loss =  float(int(conf_loss.numpy()*100)/100.0)
-            prob_loss =  float(int(prob_loss.numpy()*100)/100.0)
+            #giou_loss =  float(int(giou_loss.numpy()*100)/100.0)
+            #conf_loss =  float(int(conf_loss.numpy()*100)/100.0)
+            #prob_loss =  float(int(prob_loss.numpy()*100)/100.0)
             
             
             
@@ -965,7 +965,7 @@ def main(_argv):
                       + '      ' + "{0:.3f}".format(giou_loss)\
                       + '      ' + "{0:.3f}".format(conf_loss)\
                       + '     ' + "{0:.3f}".format(prob_loss)\
-                      + '     ' + "{0:.1f}".format(cfg.TRAIN.INPUT_SIZE)   
+                      + '     ' + "{0:.3f}".format(cfg.TRAIN.INPUT_SIZE)   
             PREFIX = colorstr(bar_str)
             pbar_train.desc = f'{PREFIX}'
             
@@ -980,15 +980,16 @@ def main(_argv):
         Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss = 0,0,0,0
         if DO_VAL:
             print('      Total_loss       box        obj        cls')
-            #print('     --------------------------------------------------------')
+            print('     ------------------------------------------------------------')
             save_valloss_min_model = False
             for image_data, target in pbar_test:
                 total_loss_val,giou_loss,conf_loss,prob_loss = test_step(image_data, target)
                 
-                total_loss_val =  float(int(total_loss_val*100)/100.0)
-                giou_loss =  float(int(giou_loss.numpy()*100)/100.0)
-                conf_loss =  float(int(conf_loss.numpy()*100)/100.0)
-                prob_loss =  float(int(prob_loss.numpy()*100)/100.0)
+                #total_loss_val =  float(int(total_loss_val*100)/100.0)
+                #giou_loss =  float(int(giou_loss.numpy()*100)/100.0)
+                #conf_loss =  float(int(conf_loss.numpy()*100)/100.0)
+                #prob_loss =  float(int(prob_loss.numpy()*100)/100.0)
+               
                 
                 bar_str =   '         '+ str(total_loss_val)\
                           + '         ' + "{0:.3f}".format(giou_loss)\
@@ -1011,36 +1012,37 @@ def main(_argv):
         #if True:
             #print('Best Val loss: {} , Total_Val_Loss : {} start to save best and current model'.format(VAL_LOSS,Total_Val_Loss))
             #tf.saved_model.save(model, './model')
-            model.save_weights("./checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny_best/yolov4-tiny-best")
-            model.save_weights("./checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/yolov4-tiny")
+            model.save_weights("./checkpoints_yolov4_20220806_ciou_tf25_mosaic_aug_best/yolov4-tiny-best")
+            model.save_weights("./checkpoints_yolov4_20220806_ciou_tf25_mosaic_aug/yolov4-tiny")
             #save_tf(weights='./checkpoints_yolov4_20220729_ciou_tf25_mosaic_aug_test/yolov4')    
             #model.save('./model_20220731')
         else:
             #print('Best Val loss: {} , Total_Val_Loss : {} start to save current model'.format(VAL_LOSS,Total_Val_Loss))
-            model.save_weights("./checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/yolov4")
+            model.save_weights("./checkpoints_yolov4_20220806_ciou_tf25_mosaic_aug/yolov4")
         
-        #annotation_path= './data/dataset/factory_data_val_blur9_20220729.txt'
-        annotation_path= './data/dataset/factory_data_val_noaug_small.txt'
-        Validation('./checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/yolov4-tiny',INPUT_SIZE=416,framework='tf',annotation_path=annotation_path,model='yolov4',tiny=False,IOU=0.45,SCORE=0.30)
-        output = './mAP/results'
-        mAP, m_mrec, m_mprec, ap_list = precision_recall_mAP(output,draw_plot=True,show_animation=False,ignore=[],set_class_iou=None,MINOVERLAP=0.5,quiet=True,no_plot=True)
-        records.append(['Val  ', epoch+1, Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss, m_mprec, m_mrec, mAP ])
-        mAP_text = "{0:.3f}".format(mAP)
-        m_mrec_text = "{0:.3f}".format(m_mrec)
-        m_mprec_text = "{0:.3f}".format(m_mprec)
-        
-        #print(ap_list)
-                
-        full_text = '        ' + m_mprec_text + '        ' + m_mrec_text + '        ' + mAP_text
-        PREFIX = colorstr(full_text)
-        column    = '         P             R           mAP@.5                                                                                          '
-        
-        print(column)
-        #print('    ----------------------------------------------')
-        print(PREFIX)
+        if (epoch+1)>40:
+            annotation_path= './data/dataset/factory_data_val_20220806.txt'
+            #annotation_path= './data/dataset/factory_data_val_noaug_small.txt'
+            Validation('./checkpoints_yolov4_20220806_ciou_tf25_mosaic_aug/yolov4-tiny',INPUT_SIZE=416,framework='tf',annotation_path=annotation_path,model='yolov4',tiny=False,IOU=0.45,SCORE=0.30)
+            output = './mAP/results'
+            mAP, m_mrec, m_mprec, ap_list = precision_recall_mAP(output,draw_plot=True,show_animation=False,ignore=[],set_class_iou=None,MINOVERLAP=0.5,quiet=True,no_plot=True)
+            records.append(['Val  ', epoch+1, Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss, m_mprec, m_mrec, mAP ])
+            mAP_text = "{}".format(mAP)
+            m_mrec_text = "{}".format(m_mrec)
+            m_mprec_text = "{}".format(m_mprec)
+            
+            #print(ap_list)
+                    
+            full_text = '        ' + m_mprec_text + '        ' + m_mrec_text + '        ' + mAP_text
+            PREFIX = colorstr(full_text)
+            column    = '         P             R           mAP@.5                                                                                          '
+            
+            print(column)
+            print('    ----------------------------------------------')
+            print(PREFIX)
         import csv
-        result_path = './checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny/result.csv'
-        result_dir = './checkpoints_yolov4_20220805_ciou_tf25_mosaic_aug_tiny'
+        result_path = './checkpoints_yolov4_20220806_ciou_tf25_mosaic_aug/result.csv'
+        result_dir = './checkpoints_yolov4_20220806_ciou_tf25_mosaic_aug'
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         
