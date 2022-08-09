@@ -151,7 +151,7 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
                     if not picked_label[k]==clas:
                         continue
                     if iou(boxes[j],picked[k])>iou_threshold:
-                        picked[k] = Get_union_box(boxes[i][j],picked[k])
+                        picked[k] = Get_union_box(boxes[i][j],picked[k])#update picked_box by union of box and picked_box
                         keep = False# if iou of any of picked box and box > th, then remove this box   
                         break
                     else:
@@ -184,7 +184,7 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
                             continue
                         
                         if iou(boxes[i][j],picked[k],img_size)>iou_threshold:
-                            picked[k] = Get_union_box(boxes[i][j],picked[k])
+                            picked[k] = Get_union_box(boxes[i][j],picked[k]) #update picked_box by union of box and picked_box
                             keep = False
                             break # if iou of any of picked box and box > th, then remove this box   
                         else:
@@ -239,6 +239,7 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
             new_coor = [0.0,0.0,0.0,0.0]
             print('coor : \n {}'.format(coor))
             print('before coor[0]:{}, coor[1]:{}, coor[2]:{}, coor[3]:{}'.format(coor[0],coor[1],coor[2],coor[3]))
+            '''
             if int(coor[0] * image_h) > 0:
                 new_coor[0] = int(coor[0] * image_h)
             else:
@@ -259,11 +260,12 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
             else:
                 new_coor[3] = 0
             '''
+            
             new_coor[0] = int(coor[0] * image_h) 
             new_coor[2] = int(coor[2] * image_h) 
             new_coor[1] = int(coor[1] * image_w) 
             new_coor[3] = int(coor[3] * image_w) 
-            '''
+            
             print('after coor[0]:{}, coor[1]:{}, coor[2]:{}, coor[3]:{}'.format(new_coor[0],new_coor[1],new_coor[2],new_coor[3]))
             fontScale = 0.5
             print('i={}'.format(i))
@@ -291,7 +293,6 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
     
     
     return image
-        
-    
-    
-    
+
+
+
