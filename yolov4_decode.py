@@ -112,18 +112,19 @@ def filter_boxes_NonTF(box_xywh, scores, score_threshold=0.4, input_shape = 416.
     
     return (boxes, pred_conf)
                 
-
+def Get_union_box(box,picked):
+    union =  [min(box[0],picked[0]), min(box[1],picked[1]), max(box[2],picked[2]), max(box[3],picked[3])]
+    return union
 
 def iou(box,picked,img_size=416): 
     
-    print('iou\n')
-    print('box: \n {}'.format(box))
-    print('picked: \n {}'.format(picked))
-    
-    
+    #print('iou\n')
+    #print('box: \n {}'.format(box))
+    #print('picked: \n {}'.format(picked))
     box_area = (box[2]-box[0])*(box[3]-box[1])*img_size*img_size
     picked_area = (picked[2]-picked[0])*(picked[3]-picked[1])*img_size*img_size
     inter = [max(box[0],picked[0]), max(box[1],picked[1]), min(box[2],picked[2]), min(box[3],picked[3])]
+    
     inter_area = (inter[2]-inter[0])*(inter[3]-inter[1])*img_size*img_size
     inf = 0.00001
     iou = inter_area / (box_area+picked_area-inter_area + inf)
@@ -143,14 +144,16 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
         picked_pred_conf = []
         for clas in range(num_classes):
             for j in range(len(boxes)):
-                keep = True
+                keep = False
                 if not labels[j]==clas:
                     continue
                 for k in range(len(picked)):
                     if not picked_label[k]==clas:
                         continue
                     if iou(boxes[j],picked[k])>iou_threshold:
-                        keep = False
+                        picked[k] = Get_union_box(boxes[i][j],picked[k])
+                        keep = False# if iou of any of picked box and box > th, then remove this box   
+                        break
                     else:
                         keep = True
                 if keep==True:
@@ -163,6 +166,7 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
             for j in range(len(pred_conf[i])):
                 label = np.argmax(pred_conf[i][j])
                 labels.append(label)
+        #print('labels: \n {}\n shape:{}'.format(labels,np.shape(labels)))
         
         picked = []
         picked_label = []
@@ -172,15 +176,20 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
                 for j in range(len(boxes[i])): 
                     keep = True
                     if not labels[j]==clas:
+                        #print('not class')
                         continue
                     for k in range(len(picked)):
                         if not picked_label[k]==clas:
-                            print('picked_label[k] is not class {}'.format(k))
+                            #print('picked_label[k] is not class {}'.format(k))
                             continue
-                        print('boxes[i][j]: \n {}\n'.format(boxes[i][j]))
+                        
                         if iou(boxes[i][j],picked[k],img_size)>iou_threshold:
+                            picked[k] = Get_union_box(boxes[i][j],picked[k])
                             keep = False
+                            break # if iou of any of picked box and box > th, then remove this box   
                         else:
+                            #print('boxes[i][j]: \n {}'.format(boxes[i][j]))
+                            #print('iou: {}\n'.format(iou(boxes[i][j],picked[k],img_size)))
                             keep = True
                     if keep==True:
                         print('Add picked {}'.format(boxes[i][j]))
@@ -218,6 +227,7 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
     random.seed(None)
     
     picked, picked_pred_conf, picked_label = bboxes
+    print('in draw_bbox_NonTF:')
     print('picked = {}'.format(picked))
     print('picked_pred_conf = {}'.format(picked_pred_conf))
     print('picked_label = {}'.format(picked_label))
@@ -257,9 +267,13 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
             print('after coor[0]:{}, coor[1]:{}, coor[2]:{}, coor[3]:{}'.format(new_coor[0],new_coor[1],new_coor[2],new_coor[3]))
             fontScale = 0.5
             print('i={}'.format(i))
-            print('picked_label[i]:\n'.format(picked_label[i]))
-            score = picked_pred_conf[1] #fake data
-            class_ind = int(picked_label[i])
+            '''
+            for i in range(len(picked_label)):
+                print(picked_label[i])
+            '''
+            print('picked_label[i]: {} \n'.format(picked_label[i]))
+            score = max(picked_pred_conf[i]) #fake data
+            class_ind = np.argmax(picked_pred_conf[i])
             bbox_color = colors[class_ind]
             bbox_thick = int(0.6 * (image_h + image_w) / 600)
             c1, c2 = (int(new_coor[1]), int(new_coor[0])) , (int(new_coor[3]), int(new_coor[2])) #1,0,3,2
