@@ -67,10 +67,10 @@ def filter_boxes_NonTF(box_xywh, scores, score_threshold=0.4, input_shape = 416.
     for i in range(len(box_mins)):
         boxes.append([box_mins[i][0],box_mins[i][1],box_maxes[i][0],box_maxes[i][1]])
     
-    
+    print('len(boxes) = {}'.format(len(boxes)))
     if len(boxes)==0:
-        boxes = [[0.0,0.0,0.0,0.0]]
-        pred_conf = [[0.0,0.0,0.0]]
+        boxes = [[[0.0,0.0,0.0,0.0]]]
+        pred_conf = [[[0.0,0.0,0.0]]]
     else:
         if use_tf_nms:
             boxes = [boxes]
@@ -123,7 +123,8 @@ input:
     picked : [x1,y1,x2,y2]
 output:
     union: (list) union of  picked and  box [x1,y1,x2,y2]
-Purpose :update nms picked box by union of picked and removed box'''             
+Purpose :update nms picked box by union of picked and removed box
+'''             
 def Get_union_box(box,picked):
     union =  [min(box[0],picked[0]), min(box[1],picked[1]), max(box[2],picked[2]), max(box[3],picked[3])]
     return union
@@ -164,7 +165,6 @@ Implement NMS by pure python mainly using numpy
         picked_label : equal to np.argmax(picked_pred_conf), picked label after doing nms
 '''
 def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_threshold=0.5,use_tf_nms=True,img_size=416):
-    
     if not use_tf_nms:
         labels = []
         for i in range(len(pred_conf)):
@@ -176,13 +176,13 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
         picked_pred_conf = []
         for clas in range(num_classes):
             for j in range(len(boxes)):
-                keep = False
+                keep = True
                 if not labels[j]==clas:
                     continue
                 for k in range(len(picked)):
                     if not picked_label[k]==clas:
                         continue
-                    if iou(boxes[j],picked[k])>iou_threshold:
+                    if iou(boxes[j],picked[k],img_size)>iou_threshold:
                         picked[k] = Get_union_box(boxes[i][j],picked[k])#update picked_box by union of box and picked_box
                         keep = False# if iou of any of picked box and box > th, then remove this box   
                         break
