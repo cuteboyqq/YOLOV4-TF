@@ -10,7 +10,11 @@ import random
 import colorsys
 import numpy as np
 
-'''filter boxes that score < score_th'''
+'''
+func: filter_boxes_NonTF
+1.filter boxes that score < score_threshold
+2. convert xywh into y1x1y2x2 
+'''
 def filter_boxes_NonTF(box_xywh, scores, score_threshold=0.4, input_shape = 416.0):
     SHOW_LOG = True
     use_tf_nms = True
@@ -111,11 +115,26 @@ def filter_boxes_NonTF(box_xywh, scores, score_threshold=0.4, input_shape = 416.
    
     
     return (boxes, pred_conf)
-                
+
+'''
+Get union of  picked and  box
+input:
+    box : [x1,y1,x2,y2]
+    picked : [x1,y1,x2,y2]
+output:
+    union: (list) union of  picked and  box [x1,y1,x2,y2]
+Purpose :update nms picked box by union of picked and removed box'''             
 def Get_union_box(box,picked):
     union =  [min(box[0],picked[0]), min(box[1],picked[1]), max(box[2],picked[2]), max(box[3],picked[3])]
     return union
-
+''' 
+Get the iou of picked_box and box
+input:
+    box : [x1,y1,x2,y2]
+    picked : [x1,y1,x2,y2]
+output:
+    iou: (float)iou of  picked and box  
+'''
 def iou(box,picked,img_size=416): 
     
     #print('iou\n')
@@ -130,7 +149,20 @@ def iou(box,picked,img_size=416):
     iou = inter_area / (box_area+picked_area-inter_area + inf)
     return iou
 
-
+'''
+Implement NMS by pure python mainly using numpy
+    input:
+        boxes : list of boxes [[x1,y1x2,y2],[x1,y1x2,y2],...]
+        pred_conf : list of class confidence [[0.57,0.15,0.05,...],[0.24,0.85,0.14,...]...]
+        num_classes : number of classes (int)
+        iou_threshold : iou th
+        use_tf_nms : True/False : Use/Not Use Tensorflow nms function
+        img_size : (int) inference image size
+    output:
+        picked : BB after doing nms
+        picked_pred_conf : class confidence after doing nms
+        picked_label : equal to np.argmax(picked_pred_conf), picked label after doing nms
+'''
 def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_threshold=0.5,use_tf_nms=True,img_size=416):
     
     if not use_tf_nms:
@@ -200,7 +232,7 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
     return picked, picked_pred_conf, picked_label
 
 
-
+'''Get class names by class file'''
 def read_class_names(class_file_name):
     names = {}
     with open(class_file_name, 'r') as data:
@@ -209,7 +241,15 @@ def read_class_names(class_file_name):
     return names
 
 
-
+''' 
+Draw bbox(bbox is obtained by doing NMS function) on the image
+    input : image --> The image you want to draw BB
+            bboxes --> The bboxes list 
+            classes : class list
+            show_label : bool True/False : Enable/Disable show label
+    output :
+            image :   image with BB 
+'''
 def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF/data/classes/factory.names"), show_label=True):
     
     use_tf_version = True
