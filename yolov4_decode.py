@@ -16,7 +16,7 @@ func: filter_boxes_NonTF
 2. convert xywh into y1x1y2x2 
 '''
 def filter_boxes_NonTF(box_xywh, scores, score_threshold=0.4, input_shape = 416.0):
-    SHOW_LOG = True
+    SHOW_LOG = False
     use_tf_nms = True
     scores_max =  []
     for i in range(len(scores)):
@@ -224,7 +224,7 @@ def Combined_Non_Max_Suppression_NonTF(boxes,pred_conf,num_classes=3,iou_thresho
                             #print('iou: {}\n'.format(iou(boxes[i][j],picked[k],img_size)))
                             keep = True
                     if keep==True:
-                        print('Add picked {}'.format(boxes[i][j]))
+                        #print('Add picked {}'.format(boxes[i][j]))
                         picked.append(boxes[i][j])
                         picked_label.append(labels[j])
                         picked_pred_conf.append(pred_conf[i][j])
@@ -267,17 +267,17 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
     random.seed(None)
     
     picked, picked_pred_conf, picked_label = bboxes
-    print('in draw_bbox_NonTF:')
-    print('picked = {}'.format(picked))
-    print('picked_pred_conf = {}'.format(picked_pred_conf))
-    print('picked_label = {}'.format(picked_label))
+    #print('in draw_bbox_NonTF:')
+    #print('picked = {}'.format(picked))
+    #print('picked_pred_conf = {}'.format(picked_pred_conf))
+    #print('picked_label = {}'.format(picked_label))
     
     if use_tf_version:
         for i in range(len(picked)):
             #for j in range(len(picked[i])):
             coor = picked[i]
             new_coor = [0.0,0.0,0.0,0.0]
-            print('coor : \n {}'.format(coor))
+            #print('coor : \n {}'.format(coor))
             print('before coor[0]:{}, coor[1]:{}, coor[2]:{}, coor[3]:{}'.format(coor[0],coor[1],coor[2],coor[3]))
             '''
             if int(coor[0] * image_h) > 0:
@@ -300,6 +300,12 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
             else:
                 new_coor[3] = 0
             '''
+            '''
+            coor[0] = int(coor[0] * image_h) 
+            coor[2] = int(coor[2] * image_h) 
+            coor[1] = int(coor[1] * image_w) 
+            coor[3] = int(coor[3] * image_w) 
+            '''
             
             new_coor[0] = int(coor[0] * image_h) 
             new_coor[2] = int(coor[2] * image_h) 
@@ -307,18 +313,20 @@ def draw_bbox_NonTF(image, bboxes, classes=read_class_names("/home/ali/YOLOV4-TF
             new_coor[3] = int(coor[3] * image_w) 
             
             print('after coor[0]:{}, coor[1]:{}, coor[2]:{}, coor[3]:{}'.format(new_coor[0],new_coor[1],new_coor[2],new_coor[3]))
+            #print('after coor[0]:{}, coor[1]:{}, coor[2]:{}, coor[3]:{}'.format(coor[0],coor[1],coor[2],coor[3]))
             fontScale = 0.5
             print('i={}'.format(i))
             '''
             for i in range(len(picked_label)):
                 print(picked_label[i])
             '''
-            print('picked_label[i]: {} \n'.format(picked_label[i]))
+            #print('picked_label[i]: {} \n'.format(picked_label[i]))
             score = max(picked_pred_conf[i]) #fake data
             class_ind = np.argmax(picked_pred_conf[i])
             bbox_color = colors[class_ind]
             bbox_thick = int(0.6 * (image_h + image_w) / 600)
             c1, c2 = (int(new_coor[1]), int(new_coor[0])) , (int(new_coor[3]), int(new_coor[2])) #1,0,3,2
+            #c1, c2 = (int(coor[1]), int(coor[0])) , (int(coor[3]), int(coor[2])) #1,0,3,2
             cv2.rectangle(image, c1, c2, bbox_color, bbox_thick)
 
             
