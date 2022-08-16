@@ -21,12 +21,13 @@ import json
 from tqdm import tqdm
 from core.yolov4 import YOLO, decode, filter_boxes
 flags.DEFINE_string('model', 'yolov4', 'yolov4, yolov3')
-#flags.DEFINE_string('weights', './models/checkpoints_yolov4_20220812_best/yolov4-best', 'pretrained weights')
+flags.DEFINE_string('weights', './models/checkpoints_yolov4_20220815_best/yolov4-best', 'pretrained weights')
 flags.DEFINE_boolean('tiny', False, 'yolo or yolo-tiny')
-flags.DEFINE_string('weights', None, 'pretrained weights')
+#flags.DEFINE_string('weights', None, 'pretrained weights')
 flags.DEFINE_string('output', './models/checkpoints_yolov4_20220815/yolov4', 'path to output')
 flags.DEFINE_string('output_best', './models/checkpoints_yolov4_20220815_best/yolov4-best', 'path to output')
 flags.DEFINE_integer('input_size', 416, 'define input size of export model')
+flags.DEFINE_float('input_weights_map', 0.6160, 'input weight mAP_0.5')
 flags.DEFINE_float('score_thres', 0.50, 'define score threshold')
 flags.DEFINE_string('framework', 'tf', 'define what framework do you want to convert (tf, trt, tflite)')
 flags.DEFINE_float('iou', 0.10, 'iou threshold')
@@ -501,6 +502,8 @@ def main(_argv):
          Calculate the AP for each class
         """
         results_files_path = "./mAP/results/"
+        if not os.path.exists(results_files_path):
+            os.makedirs(results_files_path)
         sum_AP = 0.0
         ap_dictionary = {}
         # open file to store the results
@@ -638,6 +641,7 @@ def main(_argv):
                 
     total_epoch = first_stage_epochs + second_stage_epochs
     VAL_LOSS = 100000
+    VAL_BEST_MAP = FLAGS.input_weights_map
     for epoch in range(first_stage_epochs + second_stage_epochs):
         records = []
         if epoch < first_stage_epochs:
@@ -673,7 +677,7 @@ def main(_argv):
                           + '{:8}'.format('')+"{0:.3f}".format(conf_loss)\
                           + '{:8}'.format('')+"{0:.3f}".format(prob_loss)\
                           + '{:8}'.format('')+"{0:.3f}".format(cfg.TRAIN.INPUT_SIZE)\
-                          + '{:8}'.format('')+"{0:.6f}".format(lr)
+                          + '{:8}'.format('')+"{0:.9f}".format(lr)
                 PREFIX = colorstr(bar_str)
                 pbar_train.desc = f'{PREFIX}'
                 
@@ -682,11 +686,11 @@ def main(_argv):
                 Total_conf_loss+=conf_loss
                 Total_prob_loss+=prob_loss
                 
-            records.append(['Train', epoch+1, Total_Train_Loss.numpy(), Total_giou_loss.numpy(), Total_conf_loss.numpy(), Total_prob_loss.numpy(), lr])
-        DO_VAL = True
+            records.append(['Train', epoch+1, Total_Train_Loss.numpy(), Total_giou_loss.numpy(), Total_conf_loss.numpy(), Total_prob_loss.numpy(), lr.numpy()])
+        DO_VAL = False
         save_valloss_min_model = True
         Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss = 0,0,0,0
-        if DO_VAL and (epoch+1)>=4:
+        if DO_VAL and (epoch+1)>=10:
             
             print('{}{:10}{}{:10}{}{:10}{}'.format('Total_loss','','box','','obj','','cls'))
             print('     ------------------------------------------------------------')
@@ -714,6 +718,7 @@ def main(_argv):
                 VAL_LOSS = Total_Val_Loss
                 save_valloss_min_model = True
             #records.append(['Val  ', epoch+1, Total_Val_Loss.numpy(), Total_val_giou_loss.numpy(), Total_val_conf_loss.numpy(), Total_val_prob_loss.numpy()])
+        '''    
         if save_valloss_min_model:
         #if True:
             #print('Best Val loss: {} , Total_Val_Loss : {} start to save best and current model'.format(VAL_LOSS,Total_Val_Loss))
@@ -725,8 +730,9 @@ def main(_argv):
         else:
             #print('Best Val loss: {} , Total_Val_Loss : {} start to save current model'.format(VAL_LOSS,Total_Val_Loss))
             model.save_weights(FLAGS.output)
-        
-        if (epoch+1)>=10:
+        '''
+        if (epoch+1)>=1:
+            save_map_min_model = False
             mAP, m_mrec, m_mprec = Validation_mAP()
             output = './mAP/results'
             mAP_text = "{0:.3f}".format(mAP)
@@ -737,13 +743,32 @@ def main(_argv):
             full_text = '        ' + m_mprec_text + '        ' + m_mrec_text + '        ' + mAP_text
             PREFIX = colorstr(full_text)
             column    = '         P             R           mAP@.5   '
-            records.append(['Val  ', epoch+1, Total_Val_Loss.numpy(), Total_val_giou_loss.numpy(), Total_val_conf_loss.numpy(), Total_val_prob_loss.numpy(), m_mprec, m_mrec, mAP])
+            records.append(['Val  ', epoch+1, Total_Val_Loss, Total_val_giou_loss, Total_val_conf_loss, Total_val_prob_loss, m_mprec, m_mrec, mAP])
             print(column)
             print('    ----------------------------------------------')
             print(PREFIX)
+            
+            
+            
+            if mAP > VAL_BEST_MAP:
+                VAL_BEST_MAP = mAP
+                save_map_min_model = True
+            
+            
+            if save_map_min_model:
+            #if True:
+                #print('Best Val loss: {} , Total_Val_Loss : {} start to save best and current model'.format(VAL_LOSS,Total_Val_Loss))
+                #tf.saved_model.save(model, './model')
+                model.save_weights(FLAGS.output_best)
+                model.save_weights(FLAGS.output)
+                #save_tf(weights='./checkpoints_yolov4_20220729_ciou_tf25_mosaic_aug_test/yolov4')    
+                #model.save('./model_20220731')
+            else:
+                #print('Best Val loss: {} , Total_Val_Loss : {} start to save current model'.format(VAL_LOSS,Total_Val_Loss))
+                model.save_weights(FLAGS.output)
         import csv
-        result_path = './models/checkpoints_yolov4_20220813/result.txt'
-        result_dir = './models/checkpoints_yolov4_20220813'
+        result_path = './models/checkpoints_yolov4_20220815/result.csv'
+        result_dir = './models/checkpoints_yolov4_20220815'
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
         
